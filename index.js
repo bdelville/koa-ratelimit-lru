@@ -15,9 +15,9 @@ module.exports = ratelimit
  * - `id` id to compare requests [ip]
  * - `body` custom throw body [json]
  * - `headers` custom header names
- *  - `remaining` remaining number of requests ['X-RateLimit-Remaining']
- *  - `reset` reset timestamp ['X-RateLimit-Reset']
- *  - `total` total number of requests ['X-RateLimit-Limit']
+ *    - `remaining` remaining number of requests ['X-RateLimit-Remaining']
+ *    - `reset` reset timestamp ['X-RateLimit-Reset']
+ *    - `total` total number of requests ['X-RateLimit-Limit']
  *
  * @param {Object} opts
  * @return {Function}
@@ -62,12 +62,14 @@ function ratelimit(opts = {}) {
         }
     }
 
-    return async (ctx, next) => {
+    return function* (next) {
+        const ctx = this;
         const id = opts.id ? opts.id(ctx) : ctx.ip
         const now = Date.now()
 
         if (false === id) {
-            return await next()
+            yield next
+            return
         }
 
         // check limit
@@ -85,7 +87,8 @@ function ratelimit(opts = {}) {
 
         debug('remaining %s/%s %s', count, total, id)
         if (remaining) {
-            return await next()
+            yield next
+            return
         }
         const delta = (reset * 1000) - now | 0
         const after = reset - (now / 1000) | 0
